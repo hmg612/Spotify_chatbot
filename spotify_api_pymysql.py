@@ -53,9 +53,12 @@ def main():
 
     artist_raw = raw['artists']['items'][0]
 
+    artist = {}
 
     if artist_raw['name'] == params['q']:
-        artist = {
+
+        artist.update(
+        {
             'id': artist_raw['id'],
             'name': artist_raw['name'],
             'followers': artist_raw['followers']['total'],
@@ -63,27 +66,9 @@ def main():
             'url': artist_raw['external_urls']['spotify'],
             'image_url': artist_raw['images'][0]['url']
         }
-
-    query = """
-        INSERT INTO artists (id, name, followers, popularity, url, image_url)
-        VALUES ('{}', '{}', {}, {}, '{}', '{}')
-        ON DUPLICATE KEY UPDATE id='{}', name='{}', followers={}, popularity={}, url='{}', image_url='{}'
-    """.format(
-        artist['id'],
-        artist['name'],
-        artist['followers'],
-        artist['popularity'],
-        artist['url'],
-        artist['image_url'],
-        artist['id'],
-        artist['name'],
-        artist['followers'],
-        artist['popularity'],
-        artist['url'],
-        artist['image_url']
     )
 
-    cursor.execute(query)
+    insert_row(cursor, artist, 'artists')
     conn.commit()
     sys.exit(0)
 
@@ -180,6 +165,15 @@ def get_headers(client_id, client_secret):
     }
 
     return headers
+
+def insert_row(cursor, data, table):
+
+    placeholders = ', '.join(['%s'] * len(data))
+    columns = ', '.join(data.keys())
+    key_placeholders = ', '.join(['{0}=%s'.format(k) for k in data.keys()])
+    sql = "INSERT INTO %s ( %s ) VALUES ( %s ) ON DUPLICATE KEY UPDATE %s" % (table, columns,
+    placeholders, key_placeholders)
+    cursor.execute(sql, list(data.values())*2)
 
 
 
