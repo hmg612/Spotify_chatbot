@@ -26,11 +26,16 @@ def main():
         logging.error("could not connect to RDS")
         sys.exit(1)
 
-    cursor.execute("SHOW TABLES")
-    print(cursor.fetchall())
+    # cursor.execute("SHOW TABLES")
+    # print(cursor.fetchall())
+    #
+    # query = "INSERT INTO artist_genres (artist_id, genre) VALUES ('{}', '{}')".format('2345', 'hip-hop')
+    # cursor.execute(query)
+    # conn.commit()
+    #
+    # print("success")
+    # sys.exit(0)
 
-    print("success")
-    sys.exit(0)
 
     headers = get_headers(client_id, client_secret)
 
@@ -42,11 +47,52 @@ def main():
 
     r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
 
-    try:
-        r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
-    except:
-        logging.error(r.text)
-        sys.exit(1)
+    raw = json.loads(r.text)
+    # print(raw['artists'].keys())
+    # print(raw['artists']['items'][0].keys())
+
+    artist_raw = raw['artists']['items'][0]
+
+
+    if artist_raw['name'] == params['q']:
+        artist = {
+            'id': artist_raw['id'],
+            'name': artist_raw['name'],
+            'followers': artist_raw['followers']['total'],
+            'popularity': artist_raw['popularity'],
+            'url': artist_raw['external_urls']['spotify'],
+            'image_url': artist_raw['images'][0]['url']
+        }
+
+    query = """
+        INSERT INTO artists (id, name, followers, popularity, url, image_url)
+        VALUES ('{}', '{}', {}, {}, '{}', '{}')
+        ON DUPLICATE KEY UPDATE id='{}', name='{}', followers={}, popularity={}, url='{}', image_url='{}'
+    """.format(
+        artist['id'],
+        artist['name'],
+        artist['followers'],
+        artist['popularity'],
+        artist['url'],
+        artist['image_url'],
+        artist['id'],
+        artist['name'],
+        artist['followers'],
+        artist['popularity'],
+        artist['url'],
+        artist['image_url']
+    )
+
+    cursor.execute(query)
+    conn.commit()
+    sys.exit(0)
+
+
+    # try:
+    #     r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
+    # except:
+    #     logging.error(r.text)
+    #     sys.exit(1)
 
 
     r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
