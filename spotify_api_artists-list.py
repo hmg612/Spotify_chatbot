@@ -75,11 +75,13 @@ def main():
 
     cursor.execute("SELECT id FROM artists")
     artists = []
+
     for (id, ) in cursor.fetchall():
         artists.append(id)
 
     artist_batch = [artists[i: i+50] for i in range(0, len(artists), 50)]
-    #print(artist_batch)
+
+    artist_genres = []
 
     for i in artist_batch:
         ids = ','.join(i)
@@ -87,9 +89,23 @@ def main():
 
         r = requests.get(URL, headers=headers)
         raw = json.loads(r.text)
-        print(raw)
-        print(len(raw['artists']))
-        sys.exit(0)
+
+        for artist in raw['artists']:
+
+            for genre in artist['genres']:
+
+                artist_genres.append(
+                    {
+                        'artist_id': artist['id'],
+                        'genre': genre
+                    }
+                )
+
+    for data in artist_genres:
+        insert_row(cursor, data, 'artist_genres')
+
+    conn.commit()
+    sys.exit(0)
 
 
     r = requests.get("https://api.spotify.com/v1/search", params=params, headers=headers)
